@@ -1,10 +1,11 @@
 #pragma once
 
-using BYTE = int8_t;
+using BYTE = uint8_t;
+using SBYTE = int8_t;
 
 class LogicalAddress{
 private:
-    int16_t addy;
+    uint16_t addy;
 public:
 
     LogicalAddress(int _address){

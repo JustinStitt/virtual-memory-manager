@@ -4,8 +4,6 @@
 
 int main(int argc, const char* argv[]){
     Manager man;
-    printf("value: %d\n", man.getValue(16916));
-    printf("value: %d\n", man.getValue(16916));
-
+    man.simulate();
     return 0;
 }

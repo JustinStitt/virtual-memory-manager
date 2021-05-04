@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <cstring>
+#include <string>
 #include "file.hpp"
 #include "address.hpp"
 
@@ -12,7 +13,7 @@
 
 class Manager{
 private:
-    BYTE physical_memory[PHYS_MEM_SIZE]; // 65536 bytes of physical memory
+    SBYTE physical_memory[PHYS_MEM_SIZE]; // 65536 bytes of physical memory
     int current_frame;
 
     int page_table[PAGE_TABLE_SIZE]; // stores addressess at index mapping to physical memory
@@ -39,7 +40,7 @@ public:
     }
 
     /* get value of physical memory using virtual address */
-    BYTE getValue(int address){
+    SBYTE getValue(int address){
         LogicalAddress la(address);
         /* get the page and the offset */
         BYTE page_number = la.getPage(), 
@@ -51,8 +52,10 @@ public:
         if(physical_addy == -1){
             physical_addy = handlePageFault(page_number);
         }
-
         physical_addy += offset;
+
+        printf("Virtual address: %d Physical address: %d Value: %d\n", 
+                    address, physical_addy, physical_memory[physical_addy]);
 
         /* perform lookup on physical memory */
         return physical_memory[physical_addy];
@@ -63,20 +66,34 @@ public:
 
         // read in 256-byte page from bstore
         int pz = PAGE_SIZE;
-        BYTE readin[pz];
-        for(int x{}; x < pz; ++x){
-            readin[x] = (*bstore)[pn*pz + x];
-        }
-
-        // set physical memory to what we read in
         int new_physical_address = current_frame*FRAME_SIZE;
+
         for(int x{}; x < pz; ++x){
-            physical_memory[new_physical_address + x] = readin[x];
+            physical_memory[new_physical_address + x] = (*bstore)[pn*pz + x];
         }
 
         page_table[pn] = new_physical_address;
 
         current_frame = (current_frame + 1) % pz;
         return new_physical_address;
+    }
+
+    void simulate(){
+        int total{}, total_correct{};
+        /* read in addressess and getValue() then compare to correct.txt */
+        int value, cvalue;
+        for(int x{}; x < 30; ++x, ++total){
+            value = this->getValue(addys->getAddress());
+            cvalue = correct->parseValue();
+            // printf("correct: %d\n", cvalue);
+            if(value == cvalue) ++total_correct;
+        }
+        float accuracy = (float)total_correct/(float)total;
+        printf("----Accuracy: %.0f%%----", accuracy*100.0); 
+    }
+
+    void test(int address){
+        LogicalAddress la(address);
+        printf("page: %d, offset: %d\n", la.getPage(), la.getOffset());
     }
 };
