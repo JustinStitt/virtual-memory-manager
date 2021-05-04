@@ -4,6 +4,8 @@ class File{
 private:
     FILE* fp;
 public:
+    File() = default;
+
     /* constructor reads in file given file name. optional read/write priv. */
     File(const char* fn){
         this->fp = fopen(fn, "r");
