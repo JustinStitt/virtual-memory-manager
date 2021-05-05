@@ -45,6 +45,6 @@ public:
         return tlb[pn];
     }
 
-    decltype(tlb_hits) getHits()    { return this->tlb_hits;   }
+    decltype(tlb_hits)   getHits()  { return this->tlb_hits;   }
     decltype(tlb_misses) getMisses(){ return this->tlb_misses; }
 };

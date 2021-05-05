@@ -5,7 +5,7 @@ using SBYTE = int8_t;
 
 class LogicalAddress{
 private:
-    uint16_t addy;
+    uint16_t addy; // WORD (2 BYTES)
 public:
 
     LogicalAddress(int _address){
