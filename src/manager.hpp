@@ -20,13 +20,14 @@ private:
     /* stores addressess at index mapping to physical memory */
     int page_table[PAGE_TABLE_SIZE]; 
     int page_first_open_idx;
-
+    int page_faults, total_pages;
     /* translation lookaside buffer */
     LRU_tlb tlb;
 
     File* addys, *correct, *bstore;
 public:
-    Manager() : current_frame(0), page_first_open_idx(0) {
+    Manager() : current_frame(0), page_first_open_idx(0),
+                        page_faults(0), total_pages(0) {
         addys   = new File("../data/addresses.txt");
         correct = new File("../data/correct.txt");
         bstore  = new File("../data/BACKING_STORE.bin");
@@ -63,7 +64,7 @@ public:
             /* PAGE FAULT */
             if(physical_addy == -1){
                 physical_addy = handlePageFault(page_number);
-            }
+            } ++total_pages;
             /* insert into tlb for future use */
             tlb.push(page_number, physical_addy);
             physical_addy += offset;
@@ -79,6 +80,7 @@ public:
     /* When tlb miss and page table miss, page fault! */
     int handlePageFault(BYTE pn){
         printf("PAGE FAULT AT: %d\n", pn);
+        ++page_faults;
 
         // read in 256-byte page from bstore
         int pz = PAGE_SIZE;
@@ -109,9 +111,11 @@ public:
         float accuracy = (float)total_correct/(float)total;
         printf("----Accuracy: %.0f%%----", accuracy*100.0); 
         auto hits = tlb.getHits(), misses = tlb.getMisses();
-        printf("TLB HITS: %d , TLB MISSES: %d , rate: %.0f%%\n", 
+        printf("TLB HITS: %d----TLB MISSES: %d----TLB-hit Rate: %.0f%%\n", 
                         hits, misses, 
                             (float(hits)/float(hits + misses))*100);
+        printf("Page Fault Rate: %0.f%%", 
+                            (float)page_faults/(float)total_pages * 100);
     }
 
     /* -Debugging- LogicalAddress class */
