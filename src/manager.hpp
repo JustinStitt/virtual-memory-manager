@@ -4,9 +4,9 @@
 #include <string>
 #include "file.hpp"
 #include "address.hpp"
+#include "LRU_tlb.hpp"
 
 #define PHYS_MEM_SIZE 65536
-#define TLB_ENTRIES 16
 #define PAGE_TABLE_SIZE 256
 #define PAGE_SIZE 256
 #define FRAME_SIZE 256
@@ -19,13 +19,12 @@ private:
     int page_table[PAGE_TABLE_SIZE]; // stores addressess at index mapping to physical memory
     int page_first_open_idx;
 
-    int tlb[TLB_ENTRIES][2];
-    int tlb_idx;
+    /* translation lookaside buffer */
+    LRU_tlb tlb;
 
     File* addys, *correct, *bstore;
 public:
-    Manager() : current_frame(0), tlb_idx(0), 
-                        page_first_open_idx(0) {
+    Manager() : current_frame(0), page_first_open_idx(0) {
         addys   = new File("../data/addresses.txt");
         correct = new File("../data/correct.txt");
         bstore  = new File("../data/BACKING_STORE.bin");
@@ -45,14 +44,23 @@ public:
         /* get the page and the offset */
         BYTE page_number = la.getPage(), 
              offset      = la.getOffset();
-        /* Check page table at index page_number */
-        int physical_addy = page_table[page_number];
 
-        /* PAGE FAULT */
-        if(physical_addy == -1){
-            physical_addy = handlePageFault(page_number);
+        /* Check tlb before consulting page table */
+        bool tlb_hit = tlb.contains(page_number);
+        int physical_addy;
+
+        if(tlb_hit){ // we found this result in the tlb!
+            printf("TLB HIT!\n");
+            physical_addy = tlb[page_number] + offset;
+        }else{ // consult page table! (possible page fault!)
+            /* Check page table at index page_number */
+            physical_addy = page_table[page_number];
+            /* PAGE FAULT */
+            if(physical_addy == -1){
+                physical_addy = handlePageFault(page_number);
+            }
+            physical_addy += offset;
         }
-        physical_addy += offset;
 
         printf("Virtual address: %d Physical address: %d Value: %d\n", 
                     address, physical_addy, physical_memory[physical_addy]);
@@ -68,6 +76,9 @@ public:
         int pz = PAGE_SIZE;
         int new_physical_address = current_frame*FRAME_SIZE;
 
+        // insert into tlb for future use
+        tlb.push(pn, new_physical_address);
+
         for(int x{}; x < pz; ++x){
             physical_memory[new_physical_address + x] = (*bstore)[pn*pz + x];
         }
@@ -82,7 +93,7 @@ public:
         int total{}, total_correct{};
         /* read in addressess and getValue() then compare to correct.txt */
         int value, cvalue;
-        for(int x{}; x < 30; ++x, ++total){
+        for(int x{}; x < 1000; ++x, ++total){
             value = this->getValue(addys->getAddress());
             cvalue = correct->parseValue();
             // printf("correct: %d\n", cvalue);
@@ -90,6 +101,7 @@ public:
         }
         float accuracy = (float)total_correct/(float)total;
         printf("----Accuracy: %.0f%%----", accuracy*100.0); 
+        printf("TLB HITS: %d , TLB MISSES: %d\n", tlb.getHits(), tlb.getMisses());
     }
 
     void test(int address){
