@@ -90,7 +90,7 @@ public:
 
         page_table[pn] = new_physical_address;
 
-        current_frame = (current_frame + 1) % pz;
+        current_frame = (current_frame + 1) % FRAME_SIZE;
         return new_physical_address;
     }
 
@@ -108,8 +108,10 @@ public:
         }
         float accuracy = (float)total_correct/(float)total;
         printf("----Accuracy: %.0f%%----", accuracy*100.0); 
-        printf("TLB HITS: %d , TLB MISSES: %d\n", 
-                        tlb.getHits(), tlb.getMisses());
+        auto hits = tlb.getHits(), misses = tlb.getMisses();
+        printf("TLB HITS: %d , TLB MISSES: %d , rate: %.0f%%\n", 
+                        hits, misses, 
+                            (float(hits)/float(hits + misses))*100);
     }
 
     /* -Debugging- LogicalAddress class */
