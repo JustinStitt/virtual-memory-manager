@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <queue>
 
-#define TLB_SIZE 16
+#define TLB_SIZE 32
 /*
     Least-Recently Used Translation Lookaside Buffer
     Check with tlb before page table.
@@ -30,7 +30,6 @@ public:
 
     /* add to tlb */
     void push(int pn, int phys_addy){
-        printf("TLB INSERTION\n");
         if(tlb.size() > TLB_SIZE){
             /* least recently used in tlb */
             auto lru = lru_cache.front();
@@ -46,6 +45,6 @@ public:
         return tlb[pn];
     }
 
-    decltype(tlb_hits) getHits(){ return this->tlb_hits; }
+    decltype(tlb_hits) getHits()    { return this->tlb_hits;   }
     decltype(tlb_misses) getMisses(){ return this->tlb_misses; }
 };

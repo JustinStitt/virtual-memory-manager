@@ -10,13 +10,15 @@
 #define PAGE_TABLE_SIZE 256
 #define PAGE_SIZE 256
 #define FRAME_SIZE 256
+#define SIMULATION_SIZE 1000 // number of lines in addresses.txt and correct.txt
 
 class Manager{
 private:
-    SBYTE physical_memory[PHYS_MEM_SIZE]; // 65536 bytes of physical memory
+    SBYTE physical_memory[PHYS_MEM_SIZE];
     int current_frame;
 
-    int page_table[PAGE_TABLE_SIZE]; // stores addressess at index mapping to physical memory
+    /* stores addressess at index mapping to physical memory */
+    int page_table[PAGE_TABLE_SIZE]; 
     int page_first_open_idx;
 
     /* translation lookaside buffer */
@@ -32,6 +34,7 @@ public:
         memset(page_table, -1, sizeof(page_table));
     }
 
+    /* Destructor to handle raw pointers --- RAII */
     ~Manager(){
         delete addys;
         delete correct;
@@ -45,39 +48,41 @@ public:
         BYTE page_number = la.getPage(), 
              offset      = la.getOffset();
 
+        int physical_addy;
+
         /* Check tlb before consulting page table */
         bool tlb_hit = tlb.contains(page_number);
-        int physical_addy;
 
         if(tlb_hit){ // we found this result in the tlb!
             printf("TLB HIT!\n");
             physical_addy = tlb[page_number] + offset;
         }else{ // consult page table! (possible page fault!)
+            printf("TLB MISS!\n");
             /* Check page table at index page_number */
             physical_addy = page_table[page_number];
             /* PAGE FAULT */
             if(physical_addy == -1){
                 physical_addy = handlePageFault(page_number);
             }
+            /* insert into tlb for future use */
+            tlb.push(page_number, physical_addy);
             physical_addy += offset;
         }
 
-        printf("Virtual address: %d Physical address: %d Value: %d\n", 
+        printf("Virtual address: %d Physical address: %d Value: %d ", 
                     address, physical_addy, physical_memory[physical_addy]);
 
         /* perform lookup on physical memory */
         return physical_memory[physical_addy];
     }
 
+    /* When tlb miss and page table miss, page fault! */
     int handlePageFault(BYTE pn){
         printf("PAGE FAULT AT: %d\n", pn);
 
         // read in 256-byte page from bstore
         int pz = PAGE_SIZE;
         int new_physical_address = current_frame*FRAME_SIZE;
-
-        // insert into tlb for future use
-        tlb.push(pn, new_physical_address);
 
         for(int x{}; x < pz; ++x){
             physical_memory[new_physical_address + x] = (*bstore)[pn*pz + x];
@@ -89,23 +94,28 @@ public:
         return new_physical_address;
     }
 
+    /* Run simulation on addresses.txt and check answers with correct.txt */
     void simulate(){
         int total{}, total_correct{};
         /* read in addressess and getValue() then compare to correct.txt */
         int value, cvalue;
-        for(int x{}; x < 1000; ++x, ++total){
+        for(int x{}; x < SIMULATION_SIZE; ++x, ++total){
             value = this->getValue(addys->getAddress());
             cvalue = correct->parseValue();
+            printf("Correct: %d\n", cvalue);
             // printf("correct: %d\n", cvalue);
             if(value == cvalue) ++total_correct;
         }
         float accuracy = (float)total_correct/(float)total;
         printf("----Accuracy: %.0f%%----", accuracy*100.0); 
-        printf("TLB HITS: %d , TLB MISSES: %d\n", tlb.getHits(), tlb.getMisses());
+        printf("TLB HITS: %d , TLB MISSES: %d\n", 
+                        tlb.getHits(), tlb.getMisses());
     }
 
+    /* -Debugging- LogicalAddress class */
     void test(int address){
         LogicalAddress la(address);
-        printf("page: %d, offset: %d\n", la.getPage(), la.getOffset());
+        printf("page: %d, offset: %d\n", 
+                        la.getPage(), la.getOffset());
     }
 };
